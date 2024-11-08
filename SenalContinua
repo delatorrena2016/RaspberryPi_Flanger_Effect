@@ -1,0 +1,62 @@
+import pyaudio
+from pynput.keyboard import Listener  # Importamos el teclado
+
+# Configuracion de la interfaz de audio
+BUFFER = 32  # Tamano del buffer de audio
+RATE = 44100  # Frecuencia de muestreo
+CHANNELS = 1  # Canales 1 (Mono)
+
+# Inicializa PyAudio
+p = pyaudio.PyAudio()
+
+# Configura el stream para capturar y reproducir en tiempo real
+stream = p.open(format=pyaudio.paInt16,  # Usar 16 bits por muestra (paInt16)
+                channels=CHANNELS,
+                rate=RATE,
+                input=True,
+                output=True,
+                frames_per_buffer=BUFFER)
+
+print("Reproduciendo en tiempo real... Presiona 'q' para salir.")
+
+
+# Variable para detener el bucle
+stop_program = False
+
+# Funcion que se llama cuando se presiona una tecla
+def on_press(key):
+    global stop_program
+    try:
+        if key.char == 'q':  # Si se presiona 'q'
+            print("Detenido por el usuario.")
+            stop_program = True
+            return False  # Detiene el listener
+    except AttributeError:
+        pass  # Maneja teclas especiales
+
+# Inicia el listener en segundo plano para escuchar teclas
+listener = Listener(on_press=on_press)
+listener.start()
+
+# Reproduccion en tiempo real hasta que se presione 'q'
+try:
+    while not stop_program:
+        # Lee datos de entrada de audio
+        data = stream.read(BUFFER, exception_on_overflow=False)
+        print(data)
+        # Reproduce los datos de audio
+        stream.write(data)
+
+except KeyboardInterrupt:
+    print("Interrumpido por el usuario.")
+
+# Detiene el listener y el stream
+listener.stop()  # Detener el listener de teclas
+listener.join()  # Asegura que el listener haya terminado
+
+# Cierra el stream y termina PyAudio
+stream.stop_stream()
+stream.close()
+p.terminate()
+
+
