@@ -1,5 +1,6 @@
 import pyaudio
 from pynput.keyboard import Listener  # Importamos el teclado
+import numpy as np
 
 # Configuracion de la interfaz de audio
 BUFFER = 32  # Tamano del buffer de audio
@@ -44,6 +45,8 @@ try:
         # Lee datos de entrada de audio
         data = stream.read(BUFFER, exception_on_overflow=False)
         print(data)
+        signal = np.frombuffer(data, dtype='>u2')
+        print(signal)
         # Reproduce los datos de audio
         stream.write(data)
 
