@@ -6,7 +6,7 @@ import scipy.fftpack as fourier
 import scipy.signal as signal
 matplotlib.use('tkAgg')
 
-def audio_processing(filter_type='lowpass', low_cutoff_freq=400, high_cutoff_freq=4000, order=5):
+def audio_processing(filter_type='lowpass', low_cutoff_freq=1000, high_cutoff_freq=5000, order=5):
     # Parámetros del filtro
     # Se pueden pasar como argumentos de la función
 
@@ -93,4 +93,4 @@ def audio_processing(filter_type='lowpass', low_cutoff_freq=400, high_cutoff_fre
         fig.canvas.flush_events()
 
 # Ejemplo de uso de la función
-audio_processing(filter_type='bandpass', low_cutoff_freq=100, high_cutoff_freq=1000, order=5)
+audio_processing(filter_type='bandpass', low_cutoff_freq=1000, high_cutoff_freq=5000, order=5)
