@@ -1,6 +1,3 @@
-
-
-
 import jack
 import numpy as np
 from Flanger import *
