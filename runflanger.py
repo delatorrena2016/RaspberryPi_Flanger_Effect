@@ -4,6 +4,18 @@
 import jack
 import numpy as np
 from Flanger import *
+import gpiod
+
+#BUTTON_PIN_LP = 23
+#BUTTON_PIN_HP = 24
+#BUTTON_PIN_BP = 25
+#BUTTON_PIN_F  = 27
+#chip = gpiod.Chip('gpiochip4')
+#button_line = chip.get_line(BUTTON_PIN_F)
+#button_line.request(consumer="Button", type=gpiod.LINE_REQ_DIR_IN)
+#
+#if button_line.get_value() == 1:  # Boton presionado
+#           # funcion de filtro
 
 # Crear el cliente JACK
 client = jack.Client("Flanger")
