@@ -3,7 +3,7 @@
 
 import jack
 import numpy as np
-from Flanger import lfo, delay_line, push, flanger
+from Flanger import *
 
 # Crear el cliente JACK
 client = jack.Client("Flanger")
