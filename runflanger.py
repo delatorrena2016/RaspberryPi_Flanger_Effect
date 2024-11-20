@@ -48,13 +48,13 @@ def process(frames):
 
     # Enviar los datos a la salida (en este caso, directamente sin modificar)
     out_data = client.outports[0].get_array()
-    #out_data[:] = buffer / 32767.0
+    out_data[:] = buffer / 32767.0
 
     # Effecto Flanger
-    for i in range(len(buffer)):
-        out_data[i] = flanger(buffer[i])
-        # Normalizacion max-min para acotar valores
-    out_data = out_data / max(np.abs(out_data))
+    #for i in range(len(buffer)):
+    #    out_data[i] = flanger(buffer[i])
+    #    # Normalizacion max-min para acotar valores
+    #out_data = out_data / max(np.abs(out_data))
     
 
 # Manejo de errores
