@@ -23,7 +23,7 @@ client.inports.register("input")
 client.outports.register("output")
 
 #Inicializacion de buffer de audio de JACK
-buffer_size = 1024  # Tamaño del buffer circular
+buffer_size = 2048  # Tamaño del buffer circular
 buffer = np.zeros(buffer_size, dtype=np.int16)  #Inicializacion. 1024 elementos. Tipo: signed 16-bit integer
 write_index = 0  #Índice para escribir en el buffer
 
@@ -41,12 +41,15 @@ def process(frames):    #Frames (muestras por procesar) es provisto por el servi
         #Conversion a tipo de dato correcto 
         buffer[write_index] = np.int16(in_data[i]*32767)
 
-        # Avanzamos el ndice de escritura, y si llega al final, volvemos al principio
+        #Se aumenta el índice, se reinicia si llega al maximo tamaño del buffer
         write_index = (write_index + 1) % buffer_size
 
-    # Enviar los datos a la salida (en este caso, directamente sin modificar)
-    out_data = client.outports[0].get_array()
-    out_data[:] = buffer / 32767.0
+    #Enviar los datos a la salida 
+    #out_data se define como el 'buffer' de salida de JACK
+    out_data = client.outports[0].get_array()  
+    #Se manda a la salida el buffer sin procesar
+    #la informacion Tipo entero del buffer se Normaliza como punto flotante antes se mandarse a out_data
+    out_data[:] = buffer / 32767.0  
 
     #Efecto Flanger
     for i in range(len(buffer)):
