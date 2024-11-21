@@ -42,8 +42,10 @@ def push(sample):
   if i_n + 1 >= delay_length:
     i_n = i_n - delay_length
 
+#Funcion principal de la librería, modula la muestra a procesar desde el programa principal
 def flanger(x):
 # We are on digital domain so we're forced to clip the delay line
+#Al operar en tiempo discreto hay que redondear a entero las muestras de retardo
   m = np.floor(lfo())
   # how far in between [n-M, n-M+1] we want to find a value to compensate
   # for the previous
