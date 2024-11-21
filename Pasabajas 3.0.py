@@ -1,4 +1,3 @@
-
 import numpy as np
 import scipy.signal as signal
 
@@ -24,7 +23,7 @@ def butter_lowpass_filter(data, cutoff, fs, order=5):
 # Ejemplo de uso
 if __name__ == "__main__":
     # Parámetros del filtro
-    cutoff_freq = 1000  # Frecuencia de corte en Hz
+    cutoff_freq = 400  # Frecuencia de corte en Hz
     sampling_rate = 44100  # Frecuencia de muestreo en Hz
     order = 5  # Orden del filtro
 
@@ -38,3 +37,4 @@ if __name__ == "__main__":
 
     # Aquí puedes agregar código para guardar o procesar los datos filtrados
     print(filtered_data)
+
