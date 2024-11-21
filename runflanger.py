@@ -7,6 +7,7 @@ import gpiod
 #BUTTON_PIN_HP = 24
 #BUTTON_PIN_BP = 25
 #BUTTON_PIN_F  = 27
+
 #chip = gpiod.Chip('gpiochip4')
 #button_line = chip.get_line(BUTTON_PIN_F)
 #button_line.request(consumer="Button", type=gpiod.LINE_REQ_DIR_IN)
@@ -21,23 +22,23 @@ client = jack.Client("Flanger")
 client.inports.register("input")
 client.outports.register("output")
 
+#Inicializacion de buffer de audio de JACK
+buffer_size = 1024  # Tamaño del buffer circular
+buffer = np.zeros(buffer_size, dtype=np.int16)  #Inicializacion. 1024 elementos. Tipo: signed 16-bit integer
+write_index = 0  #Índice para escribir en el buffer
 
-# Tamo del buffer circular, por ejemplo, 1024 muestras
-buffer_size = 1024
-buffer = np.zeros(buffer_size, dtype=np.int16)
-write_index = 0  #ndice para escribir en el buffer
-
-# Funcin de callback para procesar el audio
+# Función de callback para procesar el audio
 @client.set_process_callback
-def process(frames):
-    global write_index, buffer
+def process(frames):    #Frames (muestras por procesar) es provisto por el servidor JACK
+    global write_index, buffer  #para usar variables declaradas fuera de la funcion
 
-    # Captura el audio de entrada
+    # Captura el audio desde el 'buffer' del puerto de entrada
     in_data = client.inports[0].get_array()
 
-    # Usamos el buffer circular
-    for i in range(frames):
-        # Escribir los datos en el buffer en la posicin correspondiente
+    #Grabamos en el Buffer circular la informacion de in_data
+    #La magnitud de frames define cuantos elementos grabaremos en buffer
+    for i in range(frames): 
+        #Conversion a tipo de dato correcto 
         buffer[write_index] = np.int16(in_data[i]*32767)
 
         # Avanzamos el ndice de escritura, y si llega al final, volvemos al principio
@@ -47,7 +48,7 @@ def process(frames):
     out_data = client.outports[0].get_array()
     out_data[:] = buffer / 32767.0
 
-     Effecto Flanger
+    #Efecto Flanger
     for i in range(len(buffer)):
         out_data[i] = flanger(buffer[i])
         # Normalizacion max-min para acotar valores
