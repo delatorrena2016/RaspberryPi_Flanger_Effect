@@ -22,10 +22,15 @@ client = jack.Client("Flanger")
 client.inports.register("input")
 client.outports.register("output")
 
-#Inicializacion de buffer de audio de JACK
+#Inicializacion de buffer (dry) de audio de JACK
 buffer_size = 2048  # Tamaño del buffer circular
 buffer = np.zeros(buffer_size, dtype=np.int16)  #Inicializacion. 1024 elementos. Tipo: signed 16-bit integer
 write_index = 0  #Índice para escribir en el buffer
+
+#Inicializacion de Buffer (wet) de audio procesado
+mod_buffer= np.array([], dtype=np.int16)
+#Se define el Indice del dato del buffer (dry) a modular por flanger
+mod_index= 0
 
 # Función de callback para procesar el audio
 @client.set_process_callback
@@ -47,15 +52,16 @@ def process(frames):    #Frames (muestras por procesar) es provisto por el servi
     #Enviar los datos a la salida 
     #out_data se define como el 'buffer' de salida de JACK
     out_data = client.outports[0].get_array()  
-    #Se manda a la salida el buffer sin procesar
+    #Se manda a la salida el buffer sin procesar (PROPUESTO A BORRAR!!!)
     #la informacion Tipo entero del buffer se Normaliza como punto flotante antes se mandarse a out_data
-    out_data[:] = buffer / 32767.0  
+    #out_data[:] = buffer / 32767.0  
 
     #Efecto Flanger
-    for i in range(len(buffer)):
-        out_data[i] = flanger(buffer[i])
+    for i in range(len(frames)):
+        mod_buffer[i] = flanger(buffer[mod_index])
+        mod_index= (mod_index + 1) % buffer_size
         # Normalizacion max-min para acotar valores
-    out_data = out_data / max(np.abs(out_data))
+    out_data[:] = mod_buffer / 32767.0
     
 
 # Manejo de errores
