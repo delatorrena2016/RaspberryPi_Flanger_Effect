@@ -1,37 +1,72 @@
+import jack
 import numpy as np
 import scipy.signal as signal
-numerator = [6.152e22] 
-denominator = [1, 2.094e04, 2.646e08, 1.994e12, 1.045e16, 3.264e19, 6.152e22]
+from Flanger import *
+import gpiod
 
-def filter_data(lpt, fs=44100, chunk_size=1024):
-    """
-    Aplica un filtro a los datos de entrada y devuelve los datos filtrados.
+# Crear el cliente JACK
+client = jack.Client("Flanger")
 
-    Args:
-        lpt (numpy array): Datos de entrada a filtrar.
-        numerator (list): Coeficientes del numerador de la función de transferencia.
-        denominator (list): Coeficientes del denominador de la función de transferencia.
-        fs (int): Frecuencia de muestreo.
-        chunk_size (int): Tamaño del bloque de datos a procesar.
+# Registrar puertos de entrada y salida
+client.inports.register("input")
+client.outports.register("output")
 
-    Returns:
-        numpy array: Datos filtrados.
-    """
-    # Crear la función de transferencia (dominio de Laplace)
-    system = signal.TransferFunction(numerator, denominator)
+# Inicialización de buffer (dry) de audio de JACK
+buffer_size = 2048  # Tamaño del buffer circular
+buffer = np.zeros(buffer_size, dtype=np.int16)  # Inicialización. 1024 elementos. Tipo: signed 16-bit integer
+write_index = 0  # Índice para escribir en el buffer
 
-    # Normalizar los datos de entrada
-    lpt = lpt / np.max(np.abs(lpt))
+# Inicialización de Buffer (wet) de audio procesado
+mod_buffer = np.zeros(buffer_size, dtype=np.int16)
+# Se define el Índice del dato del buffer (dry) a modular por flanger
+mod_index = 0
 
-    # Crear un array vacío para la salida filtrada
-    filtered_data = np.zeros_like(lpt)
+# Definir los coeficientes del filtro pasabajas
+numerator = [1.151e-11, 6.504e-10, 3.418e-09, 3.396e-09, 6.379e-10, 1.115e-11]
+denominator = [1, -5.895, 14.54, -19.2, 14.32, -5.719, 0.9557]
 
-    # Filtrar los datos en bloques (simulando procesamiento en tiempo real)
-    num_samples = len(lpt)
-    for i in range(0, num_samples, chunk_size):
-        data_chunk = lpt[i:i + chunk_size]
-        filtered_chunk = signal.lfilter(numerator, [1], data_chunk)
-        filtered_data[i:i + chunk_size] = filtered_chunk
+# Estado inicial del filtro
+zi = signal.lfilter_zi(numerator, denominator)
 
-    return filtered_data
+# Función de callback para procesar el audio
+@client.set_process_callback
+def process(frames):  # Frames (muestras por procesar) es provisto por el servidor JACK
+    global write_index, buffer, mod_index, mod_buffer, zi  # para usar variables declaradas fuera de la función
 
+    # Captura el audio desde el 'buffer' del puerto de entrada
+    in_data = client.inports[0].get_array()
+
+    # Grabamos en el Buffer circular la información de in_data
+    # La magnitud de frames define cuántos elementos grabaremos en buffer
+    for i in range(frames):
+        # Conversión a tipo de dato correcto
+        buffer[write_index] = np.int16(in_data[i] * 32767)
+
+        # Se aumenta el índice, se reinicia si llega al máximo tamaño del buffer
+        write_index = (write_index + 1) % buffer_size
+
+    # Aplicar el filtro pasabajas a los datos del buffer
+    filtered_buffer, zi = signal.lfilter(numerator, denominator, buffer, zi=zi)
+
+    # Efecto Flanger
+    for i in range(frames):
+        mod_buffer[i] = flanger(filtered_buffer[mod_index])
+        mod_index = (mod_index + 1) % buffer_size
+
+    # Enviar los datos filtrados a la salida
+    out_data = client.outports[0].get_array()
+    out_data[:] = mod_buffer[:frames] / 32767.0
+
+# Manejo de errores
+@client.set_xrun_callback
+def xrun(delay):
+    print("Xrun occurred:", delay)
+
+# Iniciar el cliente JACK
+with client:
+    print("Flanger is running... Press Ctrl+C to stop")
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("Capture stopped by user.")
