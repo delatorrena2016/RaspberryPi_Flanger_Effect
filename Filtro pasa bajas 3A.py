@@ -1,51 +1,29 @@
-# importamos librerias
-from scipy import signal 
-import numpy as np 
-import sounddevice as sd 
+import numpy as np
+import scipy.signal as signal
+import pyaudio
+from scipy.io import wavfile
 
-#declaramos las constantes 
+# Nuevos coeficientes del numerador y denominador
+numerator = [1.151e-11, 6.504e-10, 3.418e-09, 3.396e-09, 6.379e-10, 1.115e-11]
+denominator = [1, -5.895, 14.54, -19.2, 14.32, -5.719, 0.9557]
 
-sampling_rate = 44100  # frecuencia de muestreo 
-duration_in_seconds = 5 # duracion de la señal en segundos 
-lowpass = False # determina el filtro 
-amplitude = 0.3 # configuracion para las bocinas 
+# Cargar el archivo de audio
+fs, audio_data = wavfile.read("C:/Users/ismae/Downloads/audio_de_Prueba.wav")
 
-duration_in_samples = int(duration_in_seconds*sampling_rate) #duracion de las muestras
+# Normalizar el audio
+audio_data = audio_data / np.max(np.abs(audio_data))
 
-# generamos ruido blanco
-white_noise = np.random.default_rng().uniform(-1,1, duration_in_samples)
-input_signal = white_noise
+# Aplicar el filtro
+filtered_audio = signal.lfilter(numerator, denominator, audio_data)
 
-#Definimos frecuencias de corte 
-cutoff_frequency = np.geomspace(20000, 20, input_signal.shape[0])
+# Asegúrate de que los datos estén en el rango correcto para paInt16
+filtered_audio = np.int16(filtered_audio / np.max(np.abs(filtered_audio)) * 32767)
 
-allpass_output = np.zeros_like(input_signal) # inicializamos un arreglo de ceros del mismo tamaño de la entrada
-
-#crea una constante
-dn_1 = 0
-# creamos un for para ir muestra por muestra
-for n in range(input_signal.shape[0]):
-    break_frequency = cutoff_frequency[n]
-
-    #calcuulamos el filtro pasatodo
-    tan = np.tan(np.pi * break_frequency/sampling_rate)
-
-    a1 = (tan -1) / (tan+1) #calcula la tangente del ángulo correspondiente a la frecuencia de corte normalizada por la tasa de muestreo.
-
-    allpass_output[n] = a1*input_signal[n]+dn_1
-
-    dn_1 = input_signal[n]- a1* allpass_output[n] #Esta línea actualiza la variable de estado
-
-if lowpass:
-    allpass_output *= -1
-filter_output =input_signal+allpass_output
-
-
-filter_output *= 0.5
-
-filter_output *= amplitude
-
-sd.play(filter_output, sampling_rate)
-
-sd.wait()
+# Reproducir el audio filtrado
+p = pyaudio.PyAudio()
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=fs, output=True)
+stream.write(filtered_audio.tobytes())
+stream.stop_stream()
+stream.close()
+p.terminate()
 
