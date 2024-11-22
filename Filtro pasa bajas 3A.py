@@ -1,29 +1,39 @@
 import numpy as np
 import scipy.signal as signal
-import pyaudio
-from scipy.io import wavfile
+import matplotlib.pyplot as plt
 
-# Nuevos coeficientes del numerador y denominador
-numerator = [1.151e-11, 6.504e-10, 3.418e-09, 3.396e-09, 6.379e-10, 1.115e-11]
-denominator = [1, -5.895, 14.54, -19.2, 14.32, -5.719, 0.9557]
+numerator = [6.152e22] 
+denominator = [1, 2.094e04, 2.646e08, 1.994e12, 1.045e16, 3.264e19, 6.152e22]
 
-# Cargar el archivo de audio
-fs, audio_data = wavfile.read("C:/Users/ismae/Downloads/audio_de_Prueba.wav")
+def filter_data(numerator, denominator, data_in, fs=44100, chunk_size=1024):
+    """
+    Aplica un filtro a los datos de entrada y devuelve los datos filtrados.
 
-# Normalizar el audio
-audio_data = audio_data / np.max(np.abs(audio_data))
+    Args:
+        numerator (list): Coeficientes del numerador de la función de transferencia.
+        denominator (list): Coeficientes del denominador de la función de transferencia.
+        data_in (numpy array): Datos de entrada a filtrar.
+        fs (int): Frecuencia de muestreo.
+        chunk_size (int): Tamaño del bloque de datos a procesar.
 
-# Aplicar el filtro
-filtered_audio = signal.lfilter(numerator, denominator, audio_data)
+    Returns:
+        numpy array: Datos filtrados.
+    """
+    # Crear la función de transferencia (dominio de Laplace)
+    system = signal.TransferFunction(numerator, denominator)
 
-# Asegúrate de que los datos estén en el rango correcto para paInt16
-filtered_audio = np.int16(filtered_audio / np.max(np.abs(filtered_audio)) * 32767)
+    # Normalizar los datos de entrada
+    data_in = data_in / np.max(np.abs(data_in))
 
-# Reproducir el audio filtrado
-p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16, channels=1, rate=fs, output=True)
-stream.write(filtered_audio.tobytes())
-stream.stop_stream()
-stream.close()
-p.terminate()
+    # Crear un array vacío para la salida filtrada
+    filtered_data = np.zeros_like(data_in)
+
+    # Filtrar los datos en bloques (simulando procesamiento en tiempo real)
+    num_samples = len(data_in)
+    for i in range(0, num_samples, chunk_size):
+        data_chunk = data_in[i:i + chunk_size]
+        filtered_chunk = signal.lfilter(numerator, [1], data_chunk)
+        filtered_data[i:i + chunk_size] = filtered_chunk
+
+    return filtered_data
 
