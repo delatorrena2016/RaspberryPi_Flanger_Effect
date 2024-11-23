@@ -1,18 +1,5 @@
 import jack
 import numpy as np
-from Flanger import *
-import gpiod
-
-#BUTTON_PIN_LP = 23
-#BUTTON_PIN_HP = 24
-#BUTTON_PIN_BP = 25
-#BUTTON_PIN_F  = 27
-#chip = gpiod.Chip('gpiochip4')
-#button_line = chip.get_line(BUTTON_PIN_F)
-#button_line.request(consumer="Button", type=gpiod.LINE_REQ_DIR_IN)
-#
-#if button_line.get_value() == 1:  # Boton presionado
-#           # funcion de filtro
 
 # Crear el cliente JACK
 client = jack.Client("Flanger")
@@ -44,14 +31,11 @@ def process(frames):
         write_index = (write_index + 1) % buffer_size
 
     # Enviar los datos a la salida (en este caso, directamente sin modificar)
+    
     out_data = client.outports[0].get_array()
     out_data[:] = buffer / 32767.0
-
-     #Effecto Flanger
-    #for i in range(len(buffer)):
-     #   out_data[i] = int(flanger(buffer[i]))
-    #print(out_data)
-    
+  
+   
 
 # Manejo de errores
 @client.set_xrun_callback
@@ -67,8 +51,6 @@ with client:
     except KeyboardInterrupt:
         print("Capture stopped by user.")
                 
-        
-        
         
         
         
