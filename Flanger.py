@@ -1,3 +1,5 @@
+import numpy as np
+
 delay        = 0.01
 mod_width    = 0.003
 mod_freq     = 1                        # Rapidez del movimiento de las muescas (Hz)
@@ -10,7 +12,7 @@ phase        = 0                        # Desface inicial nulo
 i_n          = 0                        # Inicialización de indice 
 # maximum delay
 # L = fs(delay + mod_width) + 2
-delay_length = M0 + width + 2 # f441 + f132.3 + 2 = 575
+delay_length = int(M0 + width + 2) # f441 + f132.3 + 2 = 575
 delay_buffer = np.zeros(delay_length)
 
 def lfo(i=1):  # Modulador de longitud de retrazo M
@@ -24,21 +26,23 @@ def lfo(i=1):  # Modulador de longitud de retrazo M
   # cerradura sobre un solo periodo fase toma [offset = 0, 1]
   if(phase > 1.0):
     phase = phase - 1.0
-  return Mn
+  return int(Mn)
 
 def delay_line(i_m):
   global i_n, delay_buffer
-  # We force index from zero and above for inputs
-  idx = i_n - i_m
+
+  idx = i_n - i_m  # Indice actual menos modulado
   if idx < 0:
     idx = idx + delay_length
   return delay_buffer[idx]
 
 def push(sample):
   global i_n, delay_buffer
-   # push sample and closure on/over superior limit
-  delay_buffer[i_n] = sample
-  i_n = i_n + 1
+
+  delay_buffer[i_n] = sample  # Llenado punto a punto de buffer de retardo
+  i_n = i_n + 1   # Actualizacion de indice
+  # Llegamos al penultimo valor, tomamos el ultimo con indice negativo,
+  # e iniciamos desde 0
   if i_n + 1 >= delay_length:
     i_n = i_n - delay_length
 
@@ -50,7 +54,7 @@ def flanger(x):        # Mixer de señales dry y wet
   # x_eta = (1-eta)x(n-m) + eta x(n-m-1)
   x_eta = ((1 - eta) * delay_line(m)) + (eta * delay_line(m + 1))
 
-  push(x)
+  push(x) # Llenado de buffer de retardo
   # Mixer o Relacion de entrada-salida para efecto flanger sencillo,
   # suma de la señal original (dry signal) x, y la señal retrasada (linea de retardo, aquí interpolada) x_eta,
   # escalada por parametro de profundidad g 
