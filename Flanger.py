@@ -1,12 +1,12 @@
 import numpy as np
 
-delay        = 0.01
-mod_width    = 0.003
+delay        = 0.01                     # Retardo en segundos
+mod_width    = 0.003                    # Barrido o Oscilacion de retardo maximo
 mod_freq     = 1                        # Rapidez del movimiento de las muescas (Hz)
 fs           = 44.1E03                  # Tasa de muestreo (Hz)
 ratio        = mod_freq / fs            # Taza de desplazamiento de muescas por cada muestra tomada
-M0           = np.floor(fs * delay)     # Longitud de retardo promedio o promedio densidad de muescas
-width        = np.floor(fs * mod_width) # Barrido o Oscilacion de retardo maximo
+M0           = np.floor(fs * delay)     # Duracion de retardo por muestra. promedio densidad de muescas
+width        = np.floor(fs * mod_width) # Barrido en terminos de muestras
 g            = 1                        # Profundidad de las muescas [0,1]
 phase        = 0                        # Desface inicial nulo
 i_n          = 0                        # Inicialización de indice 
@@ -41,7 +41,7 @@ def push(sample):
 
   delay_buffer[i_n] = sample  # Llenado punto a punto de buffer de retardo
   i_n = i_n + 1   # Actualizacion de indice
-  # Llegamos al penultimo valor, tomamos el ultimo con indice negativo,
+  # Llegamos al penultimo valor, tomamos el ultimo con indice negativo (-1),
   # e iniciamos desde 0
   if i_n + 1 >= delay_length:
     i_n = i_n - delay_length
