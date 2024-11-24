@@ -116,7 +116,6 @@ GPIO.add_event_detect(conversion_flag0, GPIO.RISING, callback=ADC0_reading)
 GPIO.add_event_detect(conversion_flag1, GPIO.RISING, callback=ADC1_reading)
 
 for _ in range (20):
-
     #Solicitud de conversion. Se ejecuta si no hay una conversion previa pendiente de lectura
     if(conv_lock== 0):
         if(ch_conv_actual<4):
