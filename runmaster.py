@@ -10,11 +10,11 @@ client.outports.register("output")
 
 
 # Tamo del buffer circular, por ejemplo, 1024 muestras
-buffer_size = 1024
+buffer_size = 512
 buffer = np.zeros(buffer_size, dtype=np.int16)
 write_index = 0  #ndice para escribir en el buffer
 
-# Funcin de callback para procesar el audio
+# Función de callback para procesar el audio
 @client.set_process_callback
 def process(frames):
     global write_index, buffer
