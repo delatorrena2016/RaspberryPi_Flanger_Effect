@@ -21,8 +21,8 @@ write_index = 0                                 #Índice para escribir en el buf
 delay= int(1000) #Delay maximo del flanger
 depth= int(500) #Delay maximo real. Amplitud del LFO
 lfo_freq= 0.9   #Frecuencia del LFO
-feedback= 0.3   #Ganancia de la retroalimentacion de Flanger
-wet_dry= 0.5    #Ganancia de muestra retardada (1-wet_dry para muestra actual)
+feedback= 0.7   #Ganancia de la retroalimentacion de Flanger
+wet_dry= 0.6    #Ganancia de muestra retardada (1-wet_dry para muestra actual)
 
 #Parametros de LFO
 samp_per_cyc= int(44100/lfo_freq)    #Numero de muestras para evaluar un ciclo del LFO a Frecuencia de muestreo
@@ -56,7 +56,7 @@ def process(frames):
 
     #vector de retardo absoluto
     retardo_abs = np.array(depth*(1 + np.sin(pasos_ret*angle_step)), dtype=int)
-    retardo_abs = np.where(retardo_abs < 0, retardo_abs + 1000, retardo_abs)
+    retardo_abs = np.where(retardo_abs < 0, retardo_abs + buffer_size, retardo_abs)
 
     senal_ret= buffer[retardo_abs[0]]
     mod_ind_vect= np.arange(mod_ind, mod_ind+len(in_data), dtype=int)
