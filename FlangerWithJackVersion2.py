@@ -13,13 +13,13 @@ client.inports.register("input")
 client.outports.register("output")
 
 #Declaracion del buffer circular
-buffer_size = 1536                              #Tamaño del buffer
+buffer_size = 2048                              #Tamaño del buffer
 buffer = np.zeros(buffer_size, dtype=np.int16)  #Buffer circular con 
 write_index = 0                                 #Índice para escribir en el buffer
 
 #Parametros de flanger
-delay= int(500) #Delay maximo del flanger
-depth= int(200) #Delay maximo real. Amplitud del LFO
+delay= int(1000) #Delay maximo del flanger
+depth= int(500) #Delay maximo real. Amplitud del LFO
 lfo_freq= 0.9   #Frecuencia del LFO
 feedback= 0.3   #Ganancia de la retroalimentacion de Flanger
 wet_dry= 0.5    #Ganancia de muestra retardada (1-wet_dry para muestra actual)
@@ -57,18 +57,18 @@ def process(frames):
     for sample in range(frames):  
         #Calculo del indice de retardo real (m)
         #Primero se calcula el retardo absoluto como resultado del LFO
-        #retardo_abs= 500 #int(depth*(math.sin(angle_step*step_actual)+1))  
-        #step_actual= int((step_actual+1)%samp_per_cyc)  #se aumenta el paso actual de evaluacion del LFO
+        retardo_abs= int(depth*(math.sin(angle_step*step_actual)+1))  
+        step_actual= int((step_actual+1)%samp_per_cyc)  #se aumenta el paso actual de evaluacion del LFO
         #Retardo real representa el indice donde se encuentra la muestra en el buffer correpondiente con el retardo esperado
-        retardo_real= int(mod_ind-500)
+        retardo_real= int(mod_ind-retardo_abs)
         if(retardo_real<0):
             retardo_real+= buffer_size
 
         #Calculo de la señal de retardo retroalimentacion sumada
-        #if (sample>0):
-        #    senal_ret= np.clip(feedback*mod_sample[sample-1] + buffer[retardo_real], -32768, 32767).astype(np.int16)
-        #else:
-        senal_ret= buffer[retardo_real]
+        if (sample>0):
+            senal_ret= np.clip(feedback*mod_sample[sample-1] + buffer[retardo_real], -32768, 32767).astype(np.int16)
+        else:
+            senal_ret= buffer[retardo_real]
 
         mod_sample[sample] = np.clip((1 - wet_dry) * buffer[mod_ind] + wet_dry * senal_ret, -32768, 32767).astype(np.int16)
         mod_ind= (mod_ind+1)%buffer_size
