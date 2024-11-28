@@ -39,12 +39,8 @@ def process(frames):
     in_data = client.inports[0].get_array()
 
     #Actualizamos el buffer circular con la ultima informacion de entrada
-    for i in range(frames):
-        # Escribir los datos en el buffer en la posición correspondiente
-        buffer[write_index] = np.int16(in_data[i]*32767)
-
-        # Avanzamos el índice de escritura, y si llega al final, volvemos al principio
-        write_index = (write_index + 1) % buffer_size
+    buffer[write_index:write_index+len(in_data)]= np.int16(in_data*32767)
+    write_index = (write_index+len(in_data))%buffer_size
     
     #EFECTO FLANGER
     #Declaración de vector de buffer procesado
@@ -54,25 +50,24 @@ def process(frames):
     if(mod_ind<0):
         mod_ind += buffer_size   #Se garantiza la ciclicidad del indice
     
-    for sample in range(frames):  
-        #Calculo del indice de retardo real (m)
-        #Primero se calcula el retardo absoluto como resultado del LFO
-        retardo_abs= int(depth*(math.sin(angle_step*step_actual)+1))  
-        step_actual= int((step_actual+1)%samp_per_cyc)  #se aumenta el paso actual de evaluacion del LFO
-        #Retardo real representa el indice donde se encuentra la muestra en el buffer correpondiente con el retardo esperado
-        retardo_real= int(mod_ind-retardo_abs)
-        if(retardo_real<0):
-            retardo_real+= buffer_size
+    #Vector de step_actual para esta llamada de callback
+    pasos_ret= np.arange(step_actual, step_actual+len(in_data), dtype=int)
+    step_actual= (step_actual+len(in_data))%samp_per_cyc 
 
+    #vector de retardo absoluto
+    retardo_abs = np.array(depth*(1 + np.sin(pasos_ret*angle_step)), dtype=int)
+    retardo_abs = np.where(retardo_abs < 0, retardo_abs + 1000, retardo_abs)
+
+    senal_ret= buffer[retardo_abs[0]]
+    mod_ind_vect= np.arange(mod_ind, mod_ind+len(in_data), dtype=int)
+
+    for sample in range(frames):  
         #Calculo de la señal de retardo retroalimentacion sumada
         if (sample>0):
-            senal_ret= np.clip(feedback*mod_sample[sample-1] + buffer[retardo_real], -32768, 32767).astype(np.int16)
-        else:
-            senal_ret= buffer[retardo_real]
-
-        mod_sample[sample] = np.clip((1 - wet_dry) * buffer[mod_ind] + wet_dry * senal_ret, -32768, 32767).astype(np.int16)
-        mod_ind= (mod_ind+1)%buffer_size
-    
+            senal_ret= np.clip(feedback*mod_sample[sample-1] + buffer[retardo_abs[sample]], -32768, 32767).astype(np.int16)
+        
+        mod_sample[sample] = np.clip((1 - wet_dry) * buffer[mod_ind_vect[sample]] + wet_dry * senal_ret, -32768, 32767).astype(np.int16)
+        
     # Enviar los datos procesados a la salida 
     out_data = client.outports[0].get_array()
     out_data[:] =  mod_sample/ 32767.0
