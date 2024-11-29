@@ -1,26 +1,26 @@
 import numpy as np
 
-delay        = 0.003                     # [0.003,0.01]
-mod_width    = 0.003
+delay        = 0.003                    # [0.003,0.01] retardo máximo de 3ms 
+mod_width    = 0.003                    # Cant. de profundidad
 mod_freq     = 1                        # Rapidez del movimiento de las muescas (Hz)
 fs           = 44.1E03                  # Tasa de muestreo (Hz)
 
 # Cambio a muestras
-M0           = np.floor(delay * fs) # Retardo por muestra 
+M0           = np.floor(delay * fs)     # Retardo por muestra 
 width        = np.floor(mod_width * fs) # Barrido o Oscilacion de retardo maximo por muestra
 ratio        = mod_freq / fs            # Frecuencia de modulación por muestra
 # Control de la mezcla [0,1]
 feedback     = 1                        # Intensidad de la señal original
-gain         = 0.8                        # Profundidad de las muescas o flangeo 
+gain         = 0.8                      # Profundidad de las muescas o flangeo 
 # Inicializacion
 phase        = 0                        # Desface inicial nulo
 i_n          = 0                        # Inicialización de indice 
-# Retardo máximo
+# Retardo máximo y buffer de línea de retardo
 delay_length = int(2 + M0 + width)
 delay_buffer = np.zeros(delay_length)
 #count        = 0
 
-def lfo(i=1):  # Modulador de longitud de retrazo M
+def lfo(i=1):  # Modulador de longitud de retardo M
   global phase
   # Mn o M(n) es el numero de picos en la respuesta de frecuencia,
   # centrados al rededor de las frecuencias k(2pi/M), k=0,1,...,M-1.
