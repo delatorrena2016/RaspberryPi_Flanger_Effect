@@ -10,17 +10,6 @@ from gpiozero import LED, Button
 from time import sleep
 
 
-#BUTTON_PIN_LP = 23
-#BUTTON_PIN_HP = 24
-#BUTTON_PIN_BP = 25
-#BUTTON_PIN_F  = 27
-#chip = gpiod.Chip('gpiochip4')
-#button_line = chip.get_line(BUTTON_PIN_F)
-#button_line.request(consumer="Button", type=gpiod.LINE_REQ_DIR_IN)
-#
-#if button_line.get_value() == 1:  # Boton presionado
-#           # funcion de filtro
-
 # Crear el cliente JACK
 client = jack.Client("Flanger")
 
@@ -30,31 +19,45 @@ client.outports.register("output")
 
 
 
-# Configura el LED en el GPIO 14
+# Configura el LED en el GPIO 14 para Flanger activo
 led = LED(14)
 
 # Configura el botn en el GPIO 15
-button = Button(15)
+buttonfla = Button(15)
+buttonlpf = Button(18)
 
 # Define lo que sucede cuando el botn es presionado
 def passthrough(x):
     return x
 
 f1 = passthrough
+f2 = f1
 
-def button_pressed():
+def buttonfla_pressed():
     global f1
     led.on()
     f1 = flanger
 
-def button_released():
+def buttonfla_released():
     global f1
     led.off()
     f1 = passthrough
 
+def buttonlpf_pressed():
+    global f2
+    led.on()
+    f2 = lowpassf
 
-button.when_pressed = button_pressed
-button.when_released = button_released
+def buttonlpf_released():
+    global f2
+    led.off()
+    f2 = passthrough
+
+
+buttonfla.when_pressed = buttonfla_pressed
+buttonfla.when_released = buttonfla_released
+buttonlpf.when_pressed = buttonlpf_pressed
+buttonlpf.when_released = buttonlpf_released
 
 
 
@@ -66,7 +69,7 @@ write_index = 0  #ndice para escribir en el buffer
 # Funcin de callback para procesar el audio
 @client.set_process_callback
 def process(frames):
-    global write_index, buffer, f1
+    global write_index, buffer, f1, f2
 
     # Captura el audio de entrada
     in_data = client.inports[0].get_array()
@@ -88,7 +91,7 @@ def process(frames):
         out_data[i] = (buffer[i])/32767.0
        
         
-        out_data[i] = f1(out_data[i])
+        out_data[i] = f2(f1(out_data[i]))
        
        
     out_data[:] = out_data
