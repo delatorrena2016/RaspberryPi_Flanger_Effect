@@ -1,7 +1,6 @@
 import smbus2
 import RPi.GPIO as GPIO
 import time
-import array
 
 #VARIABLES DEL CONVERTIDOR ANALOGICO-DIGITAL
 ADC_ch_0_3_dir= 0x49		#Direccion de dispositivo I2C, ADC ADS1115 para canales del 0 al 3 
