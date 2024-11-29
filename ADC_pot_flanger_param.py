@@ -25,11 +25,19 @@ feedback= 0.3   #Ganancia de la retroalimentacion de Flanger
 wet_dry= 0.5    #Ganancia de muestra retardada (1-wet_dry para muestra actual)
 
 conv_lock= 0                                    #Define si se lleva cabo una solicitud de conversion en la funcion de callback (procesamiento) en ejecucion
-ch_conv_actual= 1                               #Indice para seleccionar canal de conversion ADC (0-4)
+exe_cont= 0                                     #Contador de ejecuciones lleva el registro de cuantas llamadas de callback van
+ch_conv_actual= 0                               #Indice para seleccionar canal de conversion ADC (0-4)
 ch_conv_req= [0xC3, 0xD3, 0xE3, 0xF3, 0xC3]		#valores de MSB del registro de configuracion para solicitar conversion por cada canal
 conv_mem= [0,0,0,0,0]                           #Vector de conversiones previas no normalizadas
 margen_sens= 500                                #Margen minimo para aceptar nuevo valor de conversion de parametro de usuario
     
+    #BLOQUE DE INICIALIZACION Y CONFIGURACION
+#Inicializacion de instancia de i2c en libreria SMBUS
+I2C_BUS= 1 #En raspberry pi, usualmente se usa el bus 1 de I2C
+bus= smbus2.SMBus(I2C_BUS)  #Nombre de la instanciacion
+
+GPIO.setmode(GPIO.BCM)  #Para usar la numeracion de pines GPIO BCM
+
 #CONFIGURACION DE PUERTOS GPIO
 #ALERT/RDY ADC ch 0-3
 conversion_flag0= 26 #GPIO usado como ALERT/RDY input del ADS1115 ch del 0 al 3
@@ -38,13 +46,6 @@ GPIO.setup(conversion_flag0, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #para usar res
 #ALERT/RDY ch 4
 conversion_flag1= 21 #GPIO usado como ALERT/RDY input del ADS1115 ch 4
 GPIO.setup(conversion_flag1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #para usar resistencia pull down interna, ALERT/RDY como entrada logica
-
-#BLOQUE DE INICIALIZACION Y CONFIGURACION
-#Inicializacion de instancia de i2c en libreria SMBUS
-I2C_BUS= 1 #En raspberry pi, usualmente se usa el bus 1 de I2C
-bus= smbus2.SMBus(I2C_BUS)  #Nombre de la instanciacion
-
-GPIO.setmode(GPIO.BCM)  #Para usar la numeracion de pines GPIO BCM
 
 #Ambos dispositivos ADC ADS1115 se configuran con la siguiente palabra en el registro config_register (0x01): 01000011 11101000 (0x43E8)
 #Lo anterior conlleva:
@@ -82,7 +83,7 @@ def norm_conv (lectura):
     return(resultado)
 
 #Funcion callback para leer conversion del ADC_0 
-def ADC0_reading(channel):
+def ADC0_reading():
     global delay, depth, lfo_freq, feedback, conv_lock, ch_conv_actual
 
     lectura= bus.read_word_data(ADC_ch_0_3_dir, ADC_conv_reg_dir) #lectura de la conversion del ADC de forma "cruda"
@@ -102,22 +103,18 @@ def ADC0_reading(channel):
     conv_lock= 0        #Se deshabilita el bloqueo de conversion
 
 #Funcion callback para leer conversion del ADC_1
-def ADC1_reading(channel):
+def ADC1_reading():
     global  wet_dry, conv_lock, ch_conv_actual
 
     lectura= bus.read_word_data(ADC_ch_4_dir, ADC_conv_reg_dir)	#lectura de la conversion del ADC de forma "cruda"
     wet_dry= norm_conv(lectura)   #Se normaliza la conversion y se asgina a parametro wet_dry
 
-    ch_conv_actual= 1   #Se reinicia la seleccion de canal
+    ch_conv_actual= 0   #Se reinicia la seleccion de canal
     conv_lock= 0        #Se deshabilita el bloqueo de conversion
 
-#Se definen las detecciones de evento de los flags de conversion de cada ADC
-GPIO.add_event_detect(conversion_flag0, GPIO.RISING, callback=ADC0_reading)
-GPIO.add_event_detect(conversion_flag1, GPIO.RISING, callback=ADC1_reading)
-
-for _ in range (20):
+for _ in range (40):
     #Solicitud de conversion. Se ejecuta si no hay una conversion previa pendiente de lectura
-    if(conv_lock== 0):
+    if(conv_lock== 0 and exe_cont==0):
         if(ch_conv_actual<4):
             #Solicitud de conversion al ADC_0 para el canal especificado por ch_conv_actual
             bus.write_i2c_block_data(ADC_ch_0_3_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB]) 
@@ -125,11 +122,18 @@ for _ in range (20):
             #Solicitud de conversion al ADC_1 para el canal especificado por ch_conv_actual
             bus.write_i2c_block_data(ADC_ch_4_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB]) 
         conv_lock= 1    #Se activa el bloqueo de conversion
+    
+    if GPIO.input(conversion_flag0)== GPIO.HIGH:
+        ADC0_reading()
+    if GPIO.input(conversion_flag1)== GPIO.HIGH:
+        ADC1_reading()
+    
+    exe_cont= (exe_cont+1)%2
 
     print(f"Parametro Delay: " +delay)
-    print("Parametro Depth: " +depth)
-    print("Parametro LFO Frecuency: " +lfo_freq)
-    print("Parametro Feedback: " +feedback)
-    print("Parametro Wet/Dry: " +wet_dry)
+    print(f"Parametro Depth: " +depth)
+    print(f"Parametro LFO Frecuency: " +lfo_freq)
+    print(f"Parametro Feedback: " +feedback)
+    print(f"Parametro Wet/Dry: " +wet_dry)
         
     time.sleep(1)
