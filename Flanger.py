@@ -1,9 +1,8 @@
 import numpy as np
-import math
 
 delay        = 0.003                    # [0.003,0.01] retardo máximo de 3ms 
 mod_width    = 0.003                    # Cant. de profundidad
-mod_freq     = 1                        # Rapidez del movimiento de las muescas (Hz)
+mod_freq     = 0.25                     # Rapidez del movimiento de las muescas (Hz)
 fs           = 44.1E03                  # Tasa de muestreo (Hz)
 
 # Cambio a muestras
@@ -15,7 +14,8 @@ feedback     = 1                        # Intensidad de la señal original
 gain         = 0.8                      # Profundidad de las muescas o flangeo 
 # Inicializacion
 phase        = 0                        # Desface inicial nulo
-i_n          = 0                        # Inicialización de indice 
+i_d          = 0                        # Inicialización de indice 
+i_n          = 0
 # Retardo máximo y buffer de línea de retardo
 # El tamaño del buf. retardo es una unidad más grande que el,
 # valor máximo que M(n) puede tomar.
@@ -38,26 +38,30 @@ def lfo(i=1):  # Modulador de longitud de retardo M
   return Mn
 
 def delay_line(i_m):
+  global i_n
   # We force index from zero and above for inputs
   idx = i_n - i_m
   #print(i_n,i_m,idx)
   if idx < 0:
-    idx = idx + delay_length
-  return delay_buffer[idx]
+    idx = idx + delay_length 
+  #print(i_n,i_m, idx)
+  return delay_buffer[idx%delay_length]
 
 def push(sample):
-  global i_n, delay_buffer
+  global i_d, delay_buffer
   # Asignación punto a punto del buffer al buf. de retardo.
-  delay_buffer[i_n] = sample 
+  delay_buffer[i_d] = sample 
   # Asignación de izquierda a derecha [0, len(delay_buffer)-1].
-  i_n = i_n + 1 
-  if i_n == delay_length:
-    i_n = i_n - delay_length
+  i_d = i_d + 1 
+  if i_d == delay_length:
+    i_d = i_d - delay_length
   # No asignamos punto al último espacio del buf. de retardo,
   # Así como nunca lo leemos (por inicialización 0).
 
 def flanger(x):        # Mixer de señales dry y wet
+  global i_n
   #global count
+  buffer_length = 220500
   osc = lfo()
   m = int(osc)  # Longitud de retardo M(n) calculado por LFO
   # Manejo de error de truncamiento al acercarse al limite superior
@@ -72,6 +76,9 @@ def flanger(x):        # Mixer de señales dry y wet
   # Linea de retardo interpolada, ahora M(n) varia suavemente en valores no discretos
   # x_eta = x(n-m-eta) = (1-eta)*x(n-m) + eta*x(n-m-1)
   x_eta = ((1 - eta) * delay_line(m)) + (eta * delay_line(m + 1))
+  i_n = i_n + 1
+  if i_n == buffer_length:
+    i_n = i_n - buffer_length
   push(x) # Nuevo punto en buf. de retardo
 
   # suma de la señal original (dry signal) x, y la señal retrasada (linea de retardo, aquí interpolada) x_eta 
