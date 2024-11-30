@@ -61,7 +61,7 @@ def push(sample):
 def flanger(x):        # Mixer de señales dry y wet
   global i_n
   #global count
-  buffer_length = 220500
+  buffer_length = 4096
   osc = lfo()
   m = int(osc)  # Longitud de retardo M(n) calculado por LFO
   # Manejo de error de truncamiento al acercarse al limite superior
