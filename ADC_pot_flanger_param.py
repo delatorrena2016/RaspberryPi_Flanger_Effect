@@ -11,41 +11,59 @@ ADC_Lo_thresh_dir= 0x02		#Direccion interna de ADC ADS1115 de Low Threshold Regi
 ADC_conv_reg_dir= 0x00		#direccion interna de ADC ADS1115 de Conversion register
 ADC_Hi_threshMSB= 0x80		#More significant byte de Hi_threshold 
 ADC_Lo_threshMSB= 0x00		#More significant byte de Lo_threshold
-ADC_Hi_threshLSB= 0x02		#Less significant byte de Hi_threshold 
-ADC_Lo_threshLSB= 0x01		#Less significant byte de Lo_threshold
+ADC_Hi_threshLSB= 0x00		#Less significant byte de Hi_threshold 
+ADC_Lo_threshLSB= 0x00		#Less significant byte de Lo_threshold
 ADC_conf_inicialMSB= 0x43	#More significant byte de configuracion inicial del ADC ADS1115
 ADC_conf_inicialLSB= 0xE8 	#Less significant byte de configuracion inicial del ADC ADS1115
 
-#Se definen las variables de parametros de Flanger
+#VARIABLES DE USO GENERAL
+#Para Flanger (Inicializacion)
 delay= int(500) #Delay maximo del flanger
 depth= int(400) #Delay maximo real. Amplitud del LFO
 lfo_freq= 0.9   #Frecuencia del LFO
 feedback= 0.3   #Ganancia de la retroalimentacion de Flanger
 wet_dry= 0.5    #Ganancia de muestra retardada (1-wet_dry para muestra actual)
 
-conv_lock= 0                                    #Define si se lleva cabo una solicitud de conversion en la funcion de callback (procesamiento) en ejecucion
-exe_cont= 0                                     #Contador de ejecuciones lleva el registro de cuantas llamadas de callback van
-ch_conv_actual= 0                               #Indice para seleccionar canal de conversion ADC (0-4)
-ch_conv_req= [0xC3, 0xD3, 0xE3, 0xF3, 0xC3]		#valores de MSB del registro de configuracion para solicitar conversion por cada canal
-conv_mem= [0,0,0,0,0]                           #Vector de conversiones previas no normalizadas
-margen_sens= 500                                #Margen minimo para aceptar nuevo valor de conversion de parametro de usuario
-    
-    #BLOQUE DE INICIALIZACION Y CONFIGURACION
-#Inicializacion de instancia de i2c en libreria SMBUS
-I2C_BUS= 1 #En raspberry pi, usualmente se usa el bus 1 de I2C
+#Para operación de la conversion analogica-digital 
+conv_lock= 0                                    #Bloqueo de conversion (Conversion lock) Bloquea o permite que se lleve a cabo una conversion
+ch_conv_actual= 0                               #Canal de conversion actual: Indice para seleccionar canal de conversion ADC (0-4) para callback en ejecucion
+ch_conv_req= [0xC3, 0xD3, 0xE3, 0xF3, 0xC3]		#Requiscion de canal de conversion. Byte mas significativo del registro de configuracion para solicitar conversion por cada canal
+conv_mem= [0,0,0,0,0]                           #Memoria de conversion. Vector con valores de conversiones previas 
+margen_sens= 500                                #Margen de sensibilidad. Margen minimo para aceptar nuevo valor de conversion de parametro de usuario
+exe_cont= 0										#Contador de ejecuciones de la funcion de callback
+exe_p_conv= 13                                  #Ejecuciones para conversion: Determina cada cuantas ejecuciones de callback se solicita una nueva conversion
+exe_p_lect= 6                                   #Ejecuciones para lectura: Determina cuantas ejecuciones de callback despues de la conversion ocurren para leerla
+
+#BLOQUE DE INICIALIZACION DE ENTRADAS E I2C
+#Inicializacion de instancia de I2C en libreria SMBUS
+I2C_BUS= 1                  #En raspberry pi, usualmente se usa el bus 1 de I2C
 bus= smbus2.SMBus(I2C_BUS)  #Nombre de la instanciacion
 
-GPIO.setmode(GPIO.BCM)  #Para usar la numeracion de pines GPIO BCM
+#Configuracion de puertos GPIO
+GPIO.setmode(GPIO.BCM)      #Para usar la numeracion de pines GPIO BCM
 
-#CONFIGURACION DE PUERTOS GPIO
 #ALERT/RDY ADC ch 0-3
-conversion_flag0= 26 #GPIO usado como ALERT/RDY input del ADS1115 ch del 0 al 3
-GPIO.setup(conversion_flag0, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #para usar resistencia pull down interna, ALERT/RDY como entrada logica
+conversion_flag0= 26    #GPIO usado como ALERT/RDY input del ADS1115 ch del 0 al 3
+#para usar resistencia pull down interna, ALERT/RDY como entrada logica
+GPIO.setup(conversion_flag0, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
 
 #ALERT/RDY ch 4
-conversion_flag1= 21 #GPIO usado como ALERT/RDY input del ADS1115 ch 4
-GPIO.setup(conversion_flag1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #para usar resistencia pull down interna, ALERT/RDY como entrada logica
+conversion_flag1= 21    #GPIO usado como ALERT/RDY input del ADS1115 ch 4
+#para usar resistencia pull down interna, ALERT/RDY como entrada logica
+GPIO.setup(conversion_flag1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
 
+#Selector del filtro y bypass de flanger
+flanger_bypass_sel= 5   #GPIO Input para seleccionar flanger
+lowpass_sel= 6          #GPIO Input para seleccionar filtro pasa-bajas
+bandpass_sel= 13        #GPIO Input para seleccionar filtro pasa-banda
+highpass_sel= 19        #GPIO Input para seleccionar filtro pasa-altas
+#Selectores como entradas con resistencia pull down interna
+GPIO.setup(flanger_bypass_sel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) #Selectores 
+GPIO.setup(lowpass_sel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
+GPIO.setup(bandpass_sel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
+GPIO.setup(highpass_sel, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
+
+#BLOQUE DE CONFIGURACION DEL CONVERTIDOR ANALOGICO-DIGITAL
 #Ambos dispositivos ADC ADS1115 se configuran con la siguiente palabra en el registro config_register (0x01): 01000011 11101000 (0x43E8)
 #Lo anterior conlleva:
 #Power-down state
@@ -63,6 +81,7 @@ bus.write_i2c_block_data(ADC_ch_0_3_dir, ADC_Lo_thresh_dir, [ADC_Lo_threshMSB, A
 bus.write_i2c_block_data(ADC_ch_4_dir, ADC_Lo_thresh_dir, [ADC_Lo_threshMSB, ADC_Lo_threshLSB])
 bus.write_i2c_block_data(ADC_ch_4_dir, ADC_Hi_thresh_dir, [ADC_Hi_threshMSB, ADC_Hi_threshLSB])
 
+#BLOQUE DE FUNCIONES
 #Funcion de normalizacion de lectura del ADC
 def norm_conv (lectura):
     global conv_mem
@@ -77,11 +96,11 @@ def norm_conv (lectura):
     else:
         conv_mem[ch_conv_actual]= resultado
 
-    resultado /= 26385  #Se divide la lectura para normalizarse entre 0 y 1
+    resultado /= 26485  #Se divide la lectura para normalizarse entre 0 y 1
 
     return(resultado)
 
-#Funcion callback para leer conversion del ADC_0 
+#Funcion para leer conversion del ADC_0 
 def ADC0_reading():
     global delay, depth, lfo_freq, feedback, conv_lock, ch_conv_actual
 
@@ -98,10 +117,10 @@ def ADC0_reading():
     else:
         feedback= resultado*0.9         #Ganancia de retroalimentacion
     
-    ch_conv_actual += 1 #Se actualiza la siguiente eleccion de canal a convertir 
+    ch_conv_actual += 1 #Se actualiza la siguiente eleccion de canal a convertir
     conv_lock= 0        #Se deshabilita el bloqueo de conversion
 
-#Funcion callback para leer conversion del ADC_1
+#Funcion para leer conversion del ADC_1
 def ADC1_reading():
     global  wet_dry, conv_lock, ch_conv_actual
 
@@ -111,28 +130,35 @@ def ADC1_reading():
     ch_conv_actual= 0   #Se reinicia la seleccion de canal
     conv_lock= 0        #Se deshabilita el bloqueo de conversion
 
-for _ in range (40):
-    #Solicitud de conversion. Se ejecuta si no hay una conversion previa pendiente de lectura
+def funcion_callback():
+    global  conv_lock, exe_cont, ch_conv_actual 
+    
+    #Solicitud de conversion. Se ejecuta si no hay una conversion previa pendiente de lectura y si exe_cont esta en 0
     if(conv_lock== 0 and exe_cont==0):
+        #Solicitud de conversion para el ADC0
         if(ch_conv_actual<4):
-            #Solicitud de conversion al ADC_0 para el canal especificado por ch_conv_actual
-            bus.write_i2c_block_data(ADC_ch_0_3_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB]) 
+            bus.write_i2c_block_data(ADC_ch_0_3_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB])
+        #Solicitud de conversion del ADC1
         else:
-            #Solicitud de conversion al ADC_1 para el canal especificado por ch_conv_actual
-            bus.write_i2c_block_data(ADC_ch_4_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB]) 
+            bus.write_i2c_block_data(ADC_ch_4_dir, ADC_conf_reg_dir, [ch_conv_req[ch_conv_actual], ADC_conf_inicialLSB])
         conv_lock= 1    #Se activa el bloqueo de conversion
     
-    if GPIO.input(conversion_flag0)== GPIO.HIGH:
-        ADC0_reading()
-    if GPIO.input(conversion_flag1)== GPIO.HIGH:
-        ADC1_reading()
+    #Solicitud de lectura en caso de que hayan pasado 'exe_p_lect' ejecuciones de callback despues de la solicitud de conversion
+    if (exe_cont== exe_p_lect):
+        #Solicitud de lectura del ADC0
+        if (GPIO.input(conversion_flag0)== GPIO.HIGH and ch_conv_actual<4):
+            ADC0_reading()
+        #Solicitud de lectura del ADC1
+        if (GPIO.input(conversion_flag1)== GPIO.HIGH and ch_conv_actual==4 and conv_lock==1):
+            ADC1_reading()
     
-    exe_cont= (exe_cont+1)%2
+    #Se aumenta el contador de ejecuciones de callback. Se reinicia si alcanza el valor de reset exe_p_conv
+    exe_cont= (exe_cont+1)%exe_p_conv
 
-    print(f"Parametro Delay: " +delay)
-    print(f"Parametro Depth: " +depth)
-    print(f"Parametro LFO Frecuency: " +lfo_freq)
-    print(f"Parametro Feedback: " +feedback)
-    print(f"Parametro Wet/Dry: " +wet_dry)
+    print(f"Parametro Delay: ", delay)
+    print(f"Parametro Depth: ", depth)
+    print(f"Parametro LFO Frecuency: ", lfo_freq)
+    print(f"Parametro Feedback: ", feedback)
+    print(f"Parametro Wet/Dry: ", wet_dry)
         
-    time.sleep(1)
+    
