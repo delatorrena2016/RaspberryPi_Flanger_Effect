@@ -2,7 +2,7 @@ import numpy as np
 
 # Definir las frecuencias de corte y la frecuencia de muestreo
 low_cutoff = 1000.0  # Frecuencia de corte baja en Hz
-high_cutoff = 2000.0  # Frecuencia de corte alta en Hz
+high_cutoff = 4000.0  # Frecuencia de corte alta en Hz
 fs = 44100  # Frecuencia de muestreo en Hz
 Ts = 1 / fs  # Periodo de muestreo (s)
 
