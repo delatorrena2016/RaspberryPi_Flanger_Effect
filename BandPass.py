@@ -1,12 +1,12 @@
 import numpy as np
 
-cut_off_f  = 10000.0  # Frecuencia de corte en Hz
+center_frequency = 1500.0  # Frecuencia de corte en Hz
 fs         = 44100   # Frecuencia de muestreo en Hz
 Ts         = 1/fs    # Periodo de muestreo (s)
-Q = 4                # Ancho de banda relativo
+Q = 0.5 #1500/3000               # Ancho de banda relativo
 
 x1, x2, y1, y2 = 0, 0, 0, 0  # Inicialización de salidas, actual y anterior, por muestra 
-center_frequency = 600.0
+
 
 def bandpassf(x):
     global x1, x2, y1, y2  # Actualizar la inicialización de salidas
