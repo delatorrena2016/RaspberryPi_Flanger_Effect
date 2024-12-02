@@ -1,6 +1,6 @@
 import numpy as np
 
-cut_off_f  = 10000.0  # Frecuencia de corte en Hz
+cut_off_f  = 4000.0  # Frecuencia de corte en Hz
 fs         = 44100   # Frecuencia de muestreo en Hz
 Ts         = 1/fs    # Periodo de muestreo (s)
 
