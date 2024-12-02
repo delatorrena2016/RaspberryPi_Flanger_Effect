@@ -1,5 +1,5 @@
 import smbus2
-import RPi.GPIO as GPIO
+from gpiozero import InputDevice
 import time
 
 #VARIABLES DEL CONVERTIDOR ANALOGICO-DIGITAL
@@ -40,17 +40,17 @@ I2C_BUS= 1                  #En raspberry pi, usualmente se usa el bus 1 de I2C
 bus= smbus2.SMBus(I2C_BUS)  #Nombre de la instanciacion
 
 #Configuracion de puertos GPIO
-GPIO.setmode(GPIO.BCM)      #Para usar la numeracion de pines GPIO BCM
+#GPIO.setmode(GPIO.BCM)      #Para usar la numeracion de pines GPIO BCM
 
 #ALERT/RDY ADC ch 0-3
 conversion_flag0= 26    #GPIO usado como ALERT/RDY input del ADS1115 ch del 0 al 3
 #para usar resistencia pull down interna, ALERT/RDY como entrada logica
-GPIO.setup(conversion_flag0, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
+gpio_conversion_flag0=InputDevice(conversion_flag0, pull_up=False)
 
 #ALERT/RDY ch 4
 conversion_flag1= 21    #GPIO usado como ALERT/RDY input del ADS1115 ch 4
 #para usar resistencia pull down interna, ALERT/RDY como entrada logica
-GPIO.setup(conversion_flag1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
+gpio_conversion_flag1=InputDevice(conversion_flag1, pull_up=False)
 
 #Selector del filtro y bypass de flanger
 flanger_bypass_sel= 5   #GPIO Input para seleccionar flanger
@@ -146,10 +146,10 @@ def funcion_callback():
     #Solicitud de lectura en caso de que hayan pasado 'exe_p_lect' ejecuciones de callback despues de la solicitud de conversion
     if (exe_cont== exe_p_lect):
         #Solicitud de lectura del ADC0
-        if (GPIO.input(conversion_flag0)== GPIO.HIGH and ch_conv_actual<4):
+        if (gpio_conversion_flag0.is_active and ch_conv_actual<4):
             ADC0_reading()
         #Solicitud de lectura del ADC1
-        if (GPIO.input(conversion_flag1)== GPIO.HIGH and ch_conv_actual==4 and conv_lock==1):
+        if (gpio_conversion_flag1.is_active and ch_conv_actual==4 and conv_lock==1):
             ADC1_reading()
     
     #Se aumenta el contador de ejecuciones de callback. Se reinicia si alcanza el valor de reset exe_p_conv
